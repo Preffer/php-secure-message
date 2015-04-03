@@ -1,4 +1,11 @@
 <?php
+
+/**
+ * OpenSSL based secure message processor
+ *
+ * @author		Huang Yuzhong
+ */
+
 set_error_handler(function($severity, $message, $file, $line) {
 	throw new ErrorException($message, $severity, $severity, $file, $line);
 });
@@ -64,7 +71,7 @@ try {
 
 function generate($names) {
 	if (empty($names)) {
-		trigger_error('Missing names');
+		throw new Exception('Missing names');
 	} else {
 		foreach ($names as $name) {
 			$res = openssl_pkey_new();
@@ -77,9 +84,8 @@ function generate($names) {
 			file_put_contents("{$name}_private.pem", $private);
 			echo("Generate a pair of key: {$name}_public.pem {$name}_private.pem\n");
 		}
+		return $names;
 	}
-
-	return $names;
 }
 
 function sign($file, $author) {
@@ -122,6 +128,7 @@ function decrypt($file, $recipient) {
 	}
 
 	$private = file_get_contents("{$recipient}_private.pem");
+
 	if (openssl_open($sealed, $data, $key, $private)) {
 		file_put_contents("{$file}.decrypted", $data);
 		echo("Decrypted as for ${recipient}: {$file}.decrypted\n");
@@ -145,8 +152,8 @@ function verify($file, $author) {
 	$public = file_get_contents("{$author}_public.pem");
 
 	if(openssl_verify($data, $sign, $public)) {
-		echo("Verifyed as from ${author}: {$file}.verifyed\n");
 		file_put_contents("{$file}.verifyed", $data);
+		echo("Verifyed as from ${author}: {$file}.verifyed\n");
 		return "{$file}.verifyed";
 	} else {
 		throw new Exception("## This file isn't from {$author}! ##");
@@ -163,7 +170,7 @@ function newname($file) {
 	copy($file, $newname);
 	echo("Newnamed to {$newname}\n");
 	echo("Congratulation!\n");
-	
+
 	return $newname;
 }
 

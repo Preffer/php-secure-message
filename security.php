@@ -5,15 +5,6 @@ set_error_handler(function($severity, $message, $file, $line) {
 
 try {
 	switch ($GLOBALS['argv'][1]) {
-		case 'all':
-			$names = generate(['alice', 'bob']);
-			$signed = sign('sample.pdf', $names[0]);
-			$encrypted = encrypt($signed, $names[1]);
-			$decrypted = decrypt($encrypted, $names[1]);
-			$verifyed = verify($decrypted, $names[0]);
-			$newnamed = newname($verifyed);
-			break;
-
 		case 'generate':
 			generate(array_slice($GLOBALS['argv'], 2));
 			break;
@@ -36,6 +27,18 @@ try {
 
 		case 'newname':
 			newname($GLOBALS['argv'][2]);
+			break;
+
+		case 'send':
+			send($GLOBALS['argv'][2], $GLOBALS['argv'][3], $GLOBALS['argv'][4]);
+			break;
+
+		case 'receive':
+			receive($GLOBALS['argv'][2], $GLOBALS['argv'][3], $GLOBALS['argv'][4]);
+			break;
+
+		case 'all':
+			all();
 			break;
 
 		default:
@@ -83,7 +86,7 @@ function sign($file, $author) {
 	$pack->addFile($file);
 	$pack->addFromString("sign", $signature);
 
-	echo("Sign as {$author}: {$file}.signed\n");
+	echo("Signed as {$author}: {$file}.signed\n");
 	return "{$file}.signed";
 }
 
@@ -97,7 +100,7 @@ function encrypt($file, $recipient) {
 	$pack->addFromString("{$file}", $sealed);
 	$pack->addFromString("key", $keys[0]);
 
-	echo("Encrypt for ${recipient}: {$file}.encrypted\n");
+	echo("Encrypted for ${recipient}: {$file}.encrypted\n");
 	return "{$file}.encrypted";
 }
 
@@ -113,11 +116,13 @@ function decrypt($file, $recipient) {
 	}
 
 	$private = file_get_contents("{$recipient}_private.pem");
-	openssl_open($sealed, $data, $key, $private);
-	file_put_contents("{$file}.decrypted", $data);
-
-	echo("Decrypt as ${recipient}: {$file}.decrypted\n");
-	return "{$file}.decrypted";
+	if (openssl_open($sealed, $data, $key, $private)) {
+		file_put_contents("{$file}.decrypted", $data);
+		echo("Decrypted as for ${recipient}: {$file}.decrypted\n");
+		return "{$file}.decrypted";
+	} else {
+		echo("## This file isn't for {$recipient}! ##\n");
+	}
 }
 
 function verify($file, $author) {
@@ -133,20 +138,46 @@ function verify($file, $author) {
 
 	$public = file_get_contents("{$author}_public.pem");
 
-	if( openssl_verify($data, $sign, $public) === 1) {
+	if(openssl_verify($data, $sign, $public)) {
 		echo("Verifyed as from ${author}: {$file}.verifyed\n");
 		file_put_contents("{$file}.verifyed", $data);
 		return "{$file}.verifyed";
 	} else {
-		echo("Not from {$author}");
+		echo("## This file isn't from {$author}! ##\n");
 	}
 }
 
 function newname($file) {
 	$newname = substr($file, 0, strpos($file, '.signed.encrypted.decrypted.verifyed'));
+
+	if (file_exists($newname)) {
+		$newname = 'copy_' . $newname;
+	}
+
 	rename($file, $newname);
-	echo("All steps done, rename to {$newname}\n");
+	echo("All works done, rename to {$newname}\n");
+	
 	return $newname;
+}
+
+function send($file, $author, $recipient) {
+	$signed = sign($file, $author);
+	$encrypted = encrypt($signed, $recipient);
+	return $encrypted;
+}
+
+function receive($file, $recipient, $author) {
+	$decrypted = decrypt($file, $recipient);
+	$verifyed = verify($decrypted, $author);
+	$newnamed = newname($verifyed);
+	return $newnamed;
+}
+
+function all() {
+	$names = generate(['alice', 'bob']);
+	$sent = send('sample.pdf', $names[0], $names[1]);
+	$received = receive($sent, $names[1], $names[0]);
+	return $received;
 }
 
 ?>

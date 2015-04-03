@@ -47,7 +47,8 @@ try {
 } catch (Exception $e) {
 	$filename = $GLOBALS['argv'][0];
 
-	echo("{$e->getMessage()}\n");
+	echo("{$e->getMessage()}\n\n");
+
 	echo("Usage: php {$filename} {all|generate|send|receive|sign|encrypt|decrypt|verify|newname} [arg]\n");
 	echo("Example:\n");
 	echo("\tphp {$filename} all\n");
@@ -126,7 +127,7 @@ function decrypt($file, $recipient) {
 		echo("Decrypted as for ${recipient}: {$file}.decrypted\n");
 		return "{$file}.decrypted";
 	} else {
-		echo("## This file isn't for {$recipient}! ##\n");
+		throw new Exception("## This file isn't for {$recipient}! ##");
 	}
 }
 
@@ -148,7 +149,7 @@ function verify($file, $author) {
 		file_put_contents("{$file}.verifyed", $data);
 		return "{$file}.verifyed";
 	} else {
-		echo("## This file isn't from {$author}! ##\n");
+		throw new Exception("## This file isn't from {$author}! ##");
 	}
 }
 
@@ -160,7 +161,8 @@ function newname($file) {
 	}
 
 	copy($file, $newname);
-	echo("All works done, copy to {$newname}\n");
+	echo("Newnamed to {$newname}\n");
+	echo("Congratulation!\n");
 	
 	return $newname;
 }

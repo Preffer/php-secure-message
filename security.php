@@ -46,14 +46,19 @@ try {
 	}
 } catch (Exception $e) {
 	$filename = $GLOBALS['argv'][0];
-	$message = $e->getMessage();
 
-	echo("$message\n");
-	echo("Usage: php {$filename} {all|generate|sign|encrypt|decrypt|verify} [arg]\n");
+	echo("{$e->getMessage()}\n");
+	echo("Usage: php {$filename} {all|generate|send|receive|sign|encrypt|decrypt|verify|newname} [arg]\n");
 	echo("Example:\n");
+	echo("\tphp {$filename} all\n");
 	echo("\tphp {$filename} generate alice bob\n");
+	echo("\tphp {$filename} send sample.pdf alice bob\n");
+	echo("\tphp {$filename} receive sample.pdf.signed.encrypted bob alice\n");
 	echo("\tphp {$filename} sign sample.pdf alice\n");
-	echo("\tphp {$filename} encrypt sample.pdf.sign bob\n");
+	echo("\tphp {$filename} encrypt sample.pdf.signed bob\n");
+	echo("\tphp {$filename} decrypt sample.pdf.signed.encrypted bob\n");
+	echo("\tphp {$filename} verify sample.pdf.signed.encrypted.decrypted alice\n");
+	echo("\tphp {$filename} newname sample.pdf.signed.encrypted.decrypted.verifyed\n");
 }
 
 function generate($names) {
@@ -154,8 +159,8 @@ function newname($file) {
 		$newname = 'copy_' . $newname;
 	}
 
-	rename($file, $newname);
-	echo("All works done, rename to {$newname}\n");
+	copy($file, $newname);
+	echo("All works done, copy to {$newname}\n");
 	
 	return $newname;
 }

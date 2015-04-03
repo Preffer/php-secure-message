@@ -1,17 +1,16 @@
 <?php
-set_error_handler('errorHandler');
 
-function errorHandler($severity, $message, $filename, $lineno) {
+set_error_handler(function($severity, $message, $filename, $lineno) {
 	$filename = $GLOBALS['argv'][0];
 
 	echo("$message\n");
-	echo("Usage: php {$filename} {generate|sign|encrypt|decrypt|verify} [arg]\n");
+	echo("Usage: php {$filename} {all|generate|sign|encrypt|decrypt|verify} [arg]\n");
 	echo("Example:\n");
 	echo("\tphp {$filename} generate alice bob\n");
 	echo("\tphp {$filename} sign sample.pdf alice\n");
 	echo("\tphp {$filename} encrypt sample.pdf.sign.tar bob\n");
 	exit(1);
-}
+});
 
 switch ($GLOBALS['argv'][1]) {
 	case 'all':
@@ -68,9 +67,9 @@ function sign($file, $name) {
 	$pack->addFile($file);
 	$pack->addFile("{$file}.{$name}");
 
-	echo("Signed pack has saved to {$file}.{$name}.tar\n");
-	unlink("{$file}.{$name}");
+	echo("Signed as {$name}: {$file}.{$name}.tar\n");
 
+	unlink("{$file}.{$name}");
 	return "{$file}.{$name}.tar";
 }
 
@@ -87,10 +86,10 @@ function encrypt($file, $name) {
 	$pack->addFile("{$file}.${name}");
 	$pack->addFile("{$file}.key");
 
-	echo("Encrypted pack has saved to {$file}.${name}.tar\n");
+	echo("Encrypted for ${name}: {$file}.${name}.tar\n");
+
 	unlink("{$file}.${name}");
 	unlink("{$file}.key");
-
 	return "{$file}.{$name}.tar";
 }
 

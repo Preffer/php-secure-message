@@ -9,6 +9,9 @@ try {
 			$names = generate(['alice', 'bob']);
 			$signed = sign('sample.pdf', $names[0]);
 			$encrypted = encrypt($signed, $names[1]);
+			$decrypted = decrypt($encrypted, $names[1]);
+			$verifyed = verify($decrypted, $names[0]);
+			$newnamed = newname($verifyed);
 			break;
 
 		case 'generate':
@@ -25,6 +28,14 @@ try {
 
 		case 'decrypt':
 			decrypt($GLOBALS['argv'][2], $GLOBALS['argv'][3]);
+			break;
+
+		case 'verify':
+			verify($GLOBALS['argv'][2], $GLOBALS['argv'][3]);
+			break;
+
+		case 'newname':
+			newname($GLOBALS['argv'][2]);
 			break;
 
 		default:
@@ -55,7 +66,7 @@ function generate($names) {
 
 			file_put_contents("{$name}_public.pem", $public);
 			file_put_contents("{$name}_private.pem", $private);
-			echo("Generated a pair of key: {$name}_public.pem {$name}_private.pem\n");
+			echo("Generate a pair of key: {$name}_public.pem {$name}_private.pem\n");
 		}
 	}
 
@@ -68,12 +79,12 @@ function sign($file, $author) {
 
 	openssl_sign($data, $signature, $private);
 
-	$pack = new PharData("{$file}.sign");
+	$pack = new PharData("{$file}.signed");
 	$pack->addFile($file);
 	$pack->addFromString("sign", $signature);
 
-	echo("Signed as {$author}: {$file}.sign\n");
-	return "{$file}.sign";
+	echo("Sign as {$author}: {$file}.signed\n");
+	return "{$file}.signed";
 }
 
 function encrypt($file, $recipient) {
@@ -82,12 +93,60 @@ function encrypt($file, $recipient) {
 
 	openssl_seal($data, $sealed, $keys, [$public]);
 
-	$pack = new PharData("{$file}.encrypt");
+	$pack = new PharData("{$file}.encrypted");
 	$pack->addFromString("{$file}", $sealed);
 	$pack->addFromString("key", $keys[0]);
 
-	echo("Encrypted for ${recipient}: {$file}.encrypt\n");
-	return "{$file}.encrypt";
+	echo("Encrypt for ${recipient}: {$file}.encrypted\n");
+	return "{$file}.encrypted";
+}
+
+function decrypt($file, $recipient) {
+	$pack = new PharData($file, Phar::KEY_AS_FILENAME);
+
+	foreach ($pack as $name => $object) {
+		if ($name === 'key') {
+			$key = $object->getContent();
+		} else {
+			$sealed = $object->getContent();
+		}
+	}
+
+	$private = file_get_contents("{$recipient}_private.pem");
+	openssl_open($sealed, $data, $key, $private);
+	file_put_contents("{$file}.decrypted", $data);
+
+	echo("Decrypt as ${recipient}: {$file}.decrypted\n");
+	return "{$file}.decrypted";
+}
+
+function verify($file, $author) {
+	$pack = new PharData($file, Phar::KEY_AS_FILENAME);
+
+	foreach ($pack as $name => $object) {
+		if ($name === 'sign') {
+			$sign = $object->getContent();
+		} else {
+			$data = $object->getContent();
+		}
+	}
+
+	$public = file_get_contents("{$author}_public.pem");
+
+	if( openssl_verify($data, $sign, $public) === 1) {
+		echo("Verifyed as from ${author}: {$file}.verifyed\n");
+		file_put_contents("{$file}.verifyed", $data);
+		return "{$file}.verifyed";
+	} else {
+		echo("Not from {$author}");
+	}
+}
+
+function newname($file) {
+	$newname = substr($file, 0, strpos($file, '.signed.encrypted.decrypted.verifyed'));
+	rename($file, $newname);
+	echo("All steps done, rename to {$newname}\n");
+	return $newname;
 }
 
 ?>

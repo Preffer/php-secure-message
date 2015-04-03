@@ -3,7 +3,7 @@
 set_error_handler(function($severity, $message, $filename, $lineno) {
 	$filename = $GLOBALS['argv'][0];
 
-	echo("$message\n");
+	echo("{$message}\n");
 	echo("Usage: php {$filename} {all|generate|sign|encrypt|decrypt|verify} [arg]\n");
 	echo("Example:\n");
 	echo("\tphp {$filename} generate alice bob\n");
@@ -61,15 +61,12 @@ function sign($file, $name) {
 	$private = file_get_contents("{$name}_private.pem");
 
 	openssl_sign($data, $signature, $private);
-	file_put_contents("{$file}.{$name}", $signature);
 
 	$pack = new PharData("{$file}.{$name}.tar");
 	$pack->addFile($file);
-	$pack->addFile("{$file}.{$name}");
+	$pack->addFromString("{$file}.{$name}", $signature);
 
 	echo("Signed as {$name}: {$file}.{$name}.tar\n");
-
-	unlink("{$file}.{$name}");
 	return "{$file}.{$name}.tar";
 }
 
@@ -79,17 +76,11 @@ function encrypt($file, $name) {
 
 	openssl_seal($data, $sealed, $keys, [$public]);
 
-	file_put_contents("{$file}.${name}", $sealed);
-	file_put_contents("{$file}.key", $keys[0]);
-
 	$pack = new PharData("{$file}.${name}.tar");
-	$pack->addFile("{$file}.${name}");
-	$pack->addFile("{$file}.key");
+	$pack->addFromString("{$file}.${name}", $sealed);
+	$pack->addFromString("{$file}.key", $keys[0]);
 
 	echo("Encrypted for ${name}: {$file}.${name}.tar\n");
-
-	unlink("{$file}.${name}");
-	unlink("{$file}.key");
 	return "{$file}.{$name}.tar";
 }
 
